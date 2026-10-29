@@ -1,14 +1,20 @@
 {
   "name": "mcp-server-sdo",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "2.0.0",
+  "description": "MCP server for SDO MIREA (online-edu.mirea.ru, Moodle)",
+  "main": "build/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "start": "node build/index.js"
   },
-  "keywords": [],
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "moodle",
+    "mirea",
+    "sdo"
+  ],
   "author": "",
   "license": "ISC",
   "type": "module",
