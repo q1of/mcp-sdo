@@ -3,3 +3,17 @@ build/
 .env
 .env.local
 .DS_Store
+assignments/
+*.docx
+*.txt
+__pycache__/
+word/
+download.js
+download_kr1.js
+fetch_kr1.js
+fetch_links.js
+fetch_task.js
+fetch_task.py
+read_docx.py
+read_tables.py
+inspect_moodle.js

@@ -1,67 +1,139 @@
-# SDO MIREA MCP Server
+# SDO MIREA MCP Server 🎓
 
-This is an MCP (Model Context Protocol) server designed to interact with the SDO MIREA platform (Система Дистанционного Обучения МИРЭА, online-edu.mirea.ru), which is based on Moodle.
+Максимально функциональный MCP (Model Context Protocol) сервер для взаимодействия с платформой **СДО МИРЭА** (Система Дистанционного Обучения РТУ МИРЭА — `online-edu.mirea.ru`, Moodle).
 
-This server provides AI agents with tools to interact with your Moodle account without requiring special Web Service API tokens (which are often restricted by university administrators). It operates using your standard browser session cookie.
+Сервер позволяет ИИ-ассистентам (Antigravity, Claude Desktop, Cursor и др.) **полностью ориентироваться на платформе**:
+- Понимать все дисциплины, их структуру и разделы.
+- Автоматически отличать типы заданий: **КР** (контрольные), **ПР** (практические), **ЛР** (лабораторные), **ДЗ** (домашние задания), **тесты** и **опросы**.
+- Распознавать **формат выполнения**: выявлять задания, выполняемые **очно в аудитории** (по ключевым фразам в описании и отсутствию онлайн-сдачи), чтобы не тратить время на их выполнение онлайн.
+- Контролировать **дедлайны**: оперативно выгружать долги (просроченные задания), задачи на ближайшую неделю и предстоящие сроки.
+- Изучать **вспомогательные материалы**: читать лекции и страницы курсов, списки файлов в папках, находить презентации и методички.
+- Напрямую **скачивать файлы** заданий (шаблоны `.docx`, `.pdf`, `.zip`, `.py`) в рабочую директорию.
 
-## Features
+Работает напрямую через сессионную куку браузера (`MoodleSession`), не требуя административных токенов Moodle Web Service REST API (которые обычно закрыты администраторами вуза).
 
-Provides AI agents with tools to:
-- `get_user_courses`: List all courses you are currently enrolled in, along with your progress.
-- `get_upcoming_assignments`: View upcoming deadlines, tests, and tasks across all your courses.
+---
 
-## Installation
+## 🛠 Доступные инструменты (Tools)
 
-1. Clone the repository and install dependencies:
+### 1. `get_user_courses`
+Получить список всех дисциплин, на которые записан студент.
+- **Параметры:**
+  - `classification` *(string, опционально)*: `'all'` (все, по умолчанию), `'inprogress'` (текущие), `'past'` (завершенные), `'future'` (предстоящие).
+- **Возвращает:** ID курса, название, категорию, процент прогресса, URL.
+
+### 2. `get_course_structure`
+Получить полное дерево структуры курса со всеми разделами и элементами.
+- **Параметры:**
+  - `course_id` *(string / number, обязательно)*: ID курса или ссылка на курс.
+- **Возвращает:** Список разделов/тем с вложенными активностями (лекции, презентации, методички, задания, тесты, опросы, форумы) и статусом их выполнения студентом.
+
+### 3. `get_assignment_details`
+Детальный анализ задания с автоматической классификацией и проверкой очного формата.
+- **Параметры:**
+  - `id_or_url` *(string, обязательно)*: ID модуля задания или полный URL (`/mod/assign/view.php?id=...`).
+- **Возвращает:**
+  - Полный очищенный текст инструкции/описания задания.
+  - Список прикрепленных файлов/методичек (`.docx`, `.pdf`, `.zip`).
+  - Классификацию: тип работы (`control_work`, `practical_work`, `lab_work`, `homework`, `coursework`, `rgr`).
+  - Детекцию очного формата: `isInPerson: true/false`, обоснование (например, *"В тексте указано выполнение в аудитории"*), формат (`in_person` / `remote`).
+  - Таблицу сдачи: статус ответа, дедлайн, оставшееся время, состояние оценивания, отзывы преподавателя.
+
+### 4. `get_quiz_details`
+Информация о тестах и опросах.
+- **Параметры:**
+  - `id_or_url` *(string, обязательно)*: ID теста/опроса или URL (`/mod/quiz/view.php?id=...`).
+- **Возвращает:** Название, тип (тест или опрос), описание, ограничение по времени, число попыток, метод оценивания, статус попыток.
+
+### 5. `get_resource_content`
+Чтение учебных материалов, страниц и лекций курса.
+- **Параметры:**
+  - `id_or_url` *(string, обязательно)*: ID страницы/ресурса/папки или URL.
+- **Возвращает:** Текст лекции/материала, ссылки на скачивание вложенных файлов, списки содержимого папок.
+
+### 6. `download_material`
+Скачивание любого файла из СДО (методички, рабочей тетради, презентации, архива) в проект.
+- **Параметры:**
+  - `url` *(string, обязательно)*: Ссылка на файл (из `pluginfile.php`).
+  - `target_path` *(string, обязательно)*: Путь для сохранения (например, `assignments/Алгоритмы/ПР-2/task.docx`).
+- **Возвращает:** Статус скачивания, путь к сохраненному файлу, размер в байтах.
+
+### 7. `get_deadlines_summary`
+Умная сводка дедлайнов и задач календаря.
+- **Параметры:**
+  - `limit` *(number, опционально, 1-50)*: Максимальное число событий (по умолчанию 50).
+  - `filter` *(string, опционально)*: `'all'`, `'overdue'` (только долги), `'upcoming'` (актуальные).
+  - `check_in_person` *(boolean, опционально, по умолчанию true)*: Детально проверять страницы заданий на признак очного выполнения.
+- **Возвращает:** Группировку задач:
+  - `overdue`: просроченные долги;
+  - `thisWeek`: задачи на ближайшие 7 дней;
+  - `upcoming`: будущие дедлайны.
+
+### 8. `search_course_materials`
+Быстрый полнотекстовый поиск по материалам и курсам.
+- **Параметры:**
+  - `query` *(string, обязательно)*: Поисковый запрос (например, `"матрицы"`, `"лекция 2"`, `"кр-1"`).
+  - `course_id` *(number, опционально)*: ID конкретного курса для фильтрации.
+
+---
+
+## 🚀 Установка и настройка
+
+### 1. Установка зависимостей и сборка
 ```bash
 npm install
-```
-
-2. Build the TypeScript code:
-```bash
 npm run build
 ```
 
-## Configuration
+### 2. Получение сессионной куки MoodleSession
+1. Откройте браузер и авторизуйтесь на [online-edu.mirea.ru](https://online-edu.mirea.ru).
+2. Нажмите `F12` (Инструменты разработчика).
+3. Перейдите во вкладку **Application** (в Firefox — **Хранилище / Storage**).
+4. В левом меню раскройте **Cookies** -> `https://online-edu.mirea.ru`.
+5. Найдите строку с именем `MoodleSession` и скопируйте её значение.
 
-To use this server, you need to provide your active Moodle session cookie (`MoodleSession`). 
-
-### How to get your MoodleSession cookie:
-1. Open your browser and log in to [online-edu.mirea.ru](https://online-edu.mirea.ru).
-2. Open Developer Tools (press `F12`).
-3. Navigate to the **Application** tab (or **Storage** in Firefox).
-4. Expand the **Cookies** section on the left sidebar and select `https://online-edu.mirea.ru`.
-5. Find the row where the Name is `MoodleSession` and copy its Value.
-
-### Environment Variables
-
-Create a `.env` file in the root directory if you are running it standalone:
+### 3. Настройка окружения (`.env`)
+Создайте файл `.env` в корне проекта:
 ```env
-MOODLE_SESSION=your_moodle_session_cookie_value
+MOODLE_SESSION=значение_вашей_куки_MoodleSession
 SDO_BASE_URL=https://online-edu.mirea.ru
 ```
 
-### Adding to an MCP Client (e.g., Claude Desktop, Antigravity, Cursor)
+### 4. Подключение к MCP клиентам
 
-Add the following to your MCP client's configuration file (e.g., `mcp_config.json`, `claude_desktop_config.json`):
+#### Antigravity / Claude Desktop
+Добавьте в конфигурационный файл MCP (`mcp_config.json` или `claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
     "sdo-mirea": {
       "command": "node",
-      "args": ["/absolute/path/to/mcp-server-sdo/build/index.js"],
+      "args": ["c:/Users/Roman/Desktop/mcp-server-sdo/build/index.js"],
       "env": {
-        "MOODLE_SESSION": "your_moodle_session_cookie_value"
+        "MOODLE_SESSION": "ваша_кука_MoodleSession"
       }
     }
   }
 }
 ```
 
-*Note: The `MoodleSession` cookie is relatively long-lived, but if the server stops responding or returns authentication errors, you will need to re-login in your browser and update the cookie in your configuration.*
+---
 
-## Development
+## 📁 Структура проекта
 
-- Start compiling in watch mode: `npm run watch` (you can add this to your package.json scripts)
-- Build manually: `npm run build`
+```text
+mcp-server-sdo/
+├── src/
+│   ├── index.ts          # Точка входа MCP сервера, регистрация tools
+│   ├── moodle-client.ts  # Клиент Moodle: запросы, AJAX, скачивание, парсинг
+│   ├── classifier.ts     # Классификатор (КР/ПР/ДЗ/ЛР, очно/дистанционно, типы материалов)
+│   └── types.ts          # TypeScript интерфейсы
+├── build/                # Скомпилированный JavaScript
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+## 📄 Лицензия
+ISC
