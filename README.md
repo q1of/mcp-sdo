@@ -109,7 +109,7 @@ SDO_BASE_URL=https://online-edu.mirea.ru
   "mcpServers": {
     "sdo-mirea": {
       "command": "node",
-      "args": ["c:/Users/Roman/Desktop/mcp-server-sdo/build/index.js"],
+      "args": ["/path/to/mcp-server-sdo/build/index.js"],
       "env": {
         "MOODLE_SESSION": "ваша_кука_MoodleSession"
       }
